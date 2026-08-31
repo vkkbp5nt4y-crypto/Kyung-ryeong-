@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>편지당? 💌</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+                   "Noto Sans KR", sans-serif;
+      background: #ffe8f0;
+      overflow: hidden;
+    }
+
+    #bg {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .float-heart {
+      position: absolute;
+      bottom: -50px;
+      color: #e98aa5;
+      opacity: .25;
+      animation: floatUp linear infinite;
+    }
+
+    @keyframes floatUp {
+      from {
+        transform: translateY(0);
+      }
+      to {
+        transform: translateY(-110vh);
+      }
+    }
+
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      padding: 24px;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    .card {
+      width: min(440px, 92vw);
+      min-height: 720px;
+      background: rgba(255, 252, 253, .94);
+      border-radius: 30px;
+      padding: 45px 25px;
+      text-align: center;
+      box-shadow: 0 15px 50px rgba(190, 80, 120, .18);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .fade {
+      animation: fade .7s ease;
+    }
+
+    @keyframes fade {
+      from {
+        opacity: 0;
+        transform: scale(.95);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    h1 {
+      color: #c94670;
+      margin: 25px 0 12px;
+      font-size: 30px;
+    }
+
+    p {
+      color: #76515e;
+      font-size: 17px;
+      margin: 10px 0;
+    }
+
+    .hint {
+      margin-top: 18px;
+      color: #d65379;
+      font-weight: 600;
+    }
+
+    /* 봉투 */
+    .envelope {
+      width: 290px;
+      height: 190px;
+      position: relative;
+      cursor: pointer;
+      margin-bottom: 20px;
+      transition: transform .5s;
+    }
+
+    .envelope:hover {
+      transform: scale(1.03);
+    }
+
+    .envelope-body {
+      position: absolute;
+      inset: 20px 0 0;
+      background: #f3b7cd;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .envelope-body::before,
+    .envelope-body::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      width: 0;
+      height: 0;
+      border-style: solid;
+    }
+
+    .envelope-body::before {
+      left: 0;
+      border-width: 95px 145px 0 0;
+      border-color: #eda8c2 transparent transparent transparent;
+    }
+
+    .envelope-body::after {
+      right: 0;
+      border-width: 95px 0 0 145px;
+      border-color: #eda8c2 transparent transparent transparent;
+    }
+
+    .flap {
+      position: absolute;
+      top: 20px;
+      left: 0;
+      width: 0;
+      height: 0;
+      border-left: 145px solid transparent;
+      border-right: 145px solid transparent;
+      border-top: 105px solid #f7c8d9;
+      transform-origin: top;
+      transition: transform .7s ease;
+      z-index: 3;
+    }
+
+    .envelope.opened .flap {
+      transform: rotateX(180deg);
+    }
+
+    .seal {
+      position: absolute;
+      left: 50%;
+      top: 105px;
+      transform: translateX(-50%);
+      width: 43px;
+      height: 43px;
+      border-radius: 50%;
+      background: #d65379;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      z-index: 5;
+    }
+
+    /* 버튼 */
+    button {
+      border: none;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .heart-button {
+      width: 75px;
+      height: 75px;
+      border-radius: 50%;
+      background: #d65379;
+      color: white;
+      font-size: 34px;
+      box-shadow: 0 8px 25px rgba(214, 83, 121, .3);
+      transition: transform .2s;
+      margin-top: 30px;
+    }
+
+    .heart-button:active {
+      transform: scale(.9);
+    }
+
+    .yes,
+    .no {
+      position: absolute;
+      border-radius: 15px;
+      padding: 15px 25px;
+      font-weight: 700;
+      transition: all .35s ease;
+    }
+
+    .yes {
+      left: 50%;
+      top: 250px;
+      transform: translateX(-50%);
+      background: #d65379;
+      color: white;
+    }
+
+    .no {
+      left: 65%;
+      top: 330px;
+      background: #eee;
+      color: #777;
+    }
+
+    .buttons-area {
+      position: relative;
+      width: 100%;
+      height: 180px;
+      margin-top: 20px;
+    }
+
+    .message {
+      max-width: 320px;
+      line-height: 1.8;
+      word-break: keep-all;
+    }
+
+    .small {
+      font-size: 14px;
+      color: #a77b89;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="bg"></div>
+
+  <!-- 1번 화면 -->
+  <section class="screen active" id="s1">
+    <div class="card">
+      <div class="envelope" id="envelope" tabindex="0">
+        <div class="envelope-body"></div>
+        <div class="flap"></div>
+        <div class="seal">♥</div>
+      </div>
+
+      <h1 id="s1Title"></h1>
+      <p id="s1Text"></p>
+    </div>
+  </section>
+
+  <!-- 2번 화면 -->
+  <section class="screen" id="s2">
+    <div class="card">
+      <h1 id="s2Title"></h1>
+      <p id="s2Text"></p>
+      <p class="hint" id="s2Hint"></p>
+
+      <button class="heart-button" id="go3">♥</button>
+    </div>
+  </section>
+
+  <!-- 3번 화면 -->
+  <section class="screen" id="s3">
+    <div class="card">
+      <h1 id="s3Title"></h1>
+
+      <div class="buttons-area">
+        <button class="yes" id="yes">응 ❤️</button>
+        <button class="no" id="no">아니</button>
+      </div>
+
+      <p class="hint" id="hint">하나 골라봐 😚</p>
+    </div>
+  </section>
+
+  <!-- 4번 화면 -->
+  <section class="screen" id="s4">
+    <div class="card">
+      <h1 id="s4Title"></h1>
+      <p id="s4Text"></p>
+      <p class="hint" id="s4Hint"></p>
+
+      <button class="heart-button" id="go5">♥</button>
+    </div>
+  </section>
+
+  <!-- 5번 화면 -->
+  <section class="screen" id="s5">
+    <div class="card">
+      <h1 id="s5MainText"></h1>
+      <p id="s5SubText"></p>
+      <p class="small" id="s5Note"></p>
+
+      <button class="heart-button" id="go6">♥</button>
+    </div>
+  </section>
+
+  <!-- 6번 화면 -->
+  <section class="screen" id="s6">
+    <div class="card">
+      <h1 id="s6Title"></h1>
+      <p class="message" id="s6Text"></p>
+
+      <div style="font-size:60px; margin-top:30px;">
+        💗
+      </div>
+    </div>
+  </section>
+
+  <script>
+
+    const story = {
+      s1Title: '편지당? 💌',
+      s1Text: '봉투 눌러서 열엉',
+
+      s2Title: '안뇽! 💗',
+      s2Text: '경령운니!',
+      s2Hint: '하트를 눌러봥 💕',
+
+      s3Title: '나 사랑하쥐?? 🥺',
+
+      s4Title: '헤헷 나더 경령운니 사랑해 ❤️',
+      s4Text: '경령운니 사랑햄',
+      s4Hint: '하트를 눌러 💗',
+
+      s5MainText: '땡땡이 요즘 뭐뭐해',
+      s5SubText: '하트 눌러봐랏',
+      s5Note: '눌러랏ㅡㅡ',
+
+      s6Title: '하잇!',
+      s6Text: '할말은없엉ㅎㅎ 그냥 사랑한다고 전하고 싶더라구 사랑햄💗'
+    };
+
+
+    const screens = document.querySelectorAll('.screen');
+
+
+    function applyStory() {
+
+      const map = {
+        s1Title: story.s1Title,
+        s1Text: story.s1Text,
+        s2Title: story.s2Title,
+        s2Text: story.s2Text,
+        s2Hint: story.s2Hint,
+        s3Title: story.s3Title,
+        s4Title: story.s4Title,
+        s4Text: story.s4Text,
+        s4Hint: story.s4Hint,
+        s5MainText: story.s5MainText,
+        s5SubText: story.s5SubText,
+        s5Note: story.s5Note,
+        s6Title: story.s6Title,
+        s6Text: story.s6Text
+      };
+
+      Object.entries(map).forEach(([id, value]) => {
+
+        const element = document.getElementById(id);
+
+        if (element) {
+          element.textContent = value;
+        }
+
+      });
+    }
+
+
+    function show(n) {
+
+      screens.forEach((screen) => {
+        screen.classList.remove('active', 'fade');
+      });
+
+      const target = document.getElementById(`s${n}`);
+
+      if (target) {
+        target.classList.add('active', 'fade');
+      }
+    }
+
+
+    applyStory();
+
+
+    /* 봉투 */
+
+    const envelope = document.getElementById('envelope');
+
+    if (envelope) {
+
+      envelope.addEventListener('click', () => {
+
+        envelope.classList.add('opened');
+
+        setTimeout(() => {
+          show(2);
+        }, 800);
+
+        burst();
+      });
+
+
+      envelope.addEventListener('keydown', (event) => {
+
+        if (event.key === 'Enter' || event.key === ' ') {
+
+          event.preventDefault();
+          envelope.click();
+
+        }
+
+      });
+
+    }
+
+
+    /* 2 → 3 */
+
+    const go3Button = document.getElementById('go3');
+
+    if (go3Button) {
+
+      go3Button.onclick = () => {
+
+        show(3);
+        burst();
+
+      };
+
+    }
+
+
+    /* 3번 아니 버튼 */
+
+    const yes = document.getElementById('yes');
+    const no = document.getElementById('no');
+    const hint = document.getElementById('hint');
+
+    let scale = 1;
+    let noClicks = 0;
+
+
+    if (no && yes && hint) {
+
+      no.addEventListener('click', () => {
+
+        noClicks += 1;
+
+        scale = Math.min(scale + 0.35, 4.8);
+
+        yes.style.transform =
+          `translateX(-50%) scale(${scale})`;
+
+        yes.style.left = '50%';
+
+        yes.style.top =
+          `${Math.max(55 - noClicks * 6, 0)}px`;
+
+
+        const shrink =
+          Math.max(1 - noClicks * 0.17, 0);
+
+
+        no.style.transform =
+          `translateX(5%) scale(${shrink})`;
+
+        no.style.opacity = shrink;
+
+        no.style.left =
+          `${50 + Math.sin(noClicks * 1.8) * 20}%`;
+
+
+        const messages = [
+
+          '진짜 아니라고?? 😭',
+          '한 번만 다시 생각해봐...',
+          '응! 버튼이 커지고 있잖아 👀',
+          '이제 거의 응밖에 안 보이지? 😂',
+          '자연스럽게 응을 눌러보자 ❤️'
+
+        ];
+
+
+        hint.textContent =
+          messages[Math.min(
+            noClicks - 1,
+            messages.length - 1
+          )];
+
+
+        if (shrink <= 0.05) {
+
+          no.style.pointerEvents = 'none';
+          no.style.display = 'none';
+
+        }
+
+      });
+
+
+      yes.addEventListener('click', () => {
+
+        show(4);
+        burst();
+
+      });
+
+    }
+
+
+    /* 4 → 5 */
+
+    const go5Button =
+      document.getElementById('go5');
+
+    if (go5Button) {
+
+      go5Button.onclick = () => {
+
+        show(5);
+        burst();
+
+      };
+
+    }
+
+
+    /* 5 → 6 */
+
+    const go6Button =
+      document.getElementById('go6');
+
+    if (go6Button) {
+
+      go6Button.onclick = () => {
+
+        show(6);
+        burst();
+
+      };
+
+    }
+
+
+    /* 하트 폭발 */
+
+    function burst() {
+
+      for (let i = 0; i < 18; i += 1) {
+
+        const heart =
+          document.createElement('div');
+
+        heart.textContent =
+          Math.random() > 0.25 ? '♥' : '✦';
+
+        heart.style.position = 'fixed';
+        heart.style.left = '50%';
+        heart.style.top = '50%';
+        heart.style.zIndex = '30';
+
+        heart.style.fontSize =
+          `${12 + Math.random() * 22}px`;
+
+        heart.style.color =
+          ['#d65379', '#e98aa5', '#b85a78']
+          [Math.floor(Math.random() * 3)];
+
+        document.body.appendChild(heart);
+
+
+        const x =
+          Math.random() * 380 - 190;
+
+        const y =
+          Math.random() * 320 - 180;
+
+
+        if (heart.animate) {
+
+          heart.animate(
+
+            [
+              {
+                transform:
+                  'translate(-50%, -50%) scale(.3)',
+                opacity: 1
+              },
+
+              {
+                transform:
+                  `translate(${x}px, ${y}px) scale(1.2)`,
+                opacity: 0
+              }
+            ],
+
+            {
+              duration:
+                900 + Math.random() * 800,
+
+              easing: 'ease-out'
+            }
+
+          ).onfinish = () => {
+
+            heart.remove();
+
+          };
+
+        }
+
+      }
+
+    }
+
+
+    /* 배경 하트 */
+
+    const bg =
+      document.getElementById('bg');
+
+
+    if (bg) {
+
+      for (let i = 0; i < 14; i += 1) {
+
+        const heart =
+          document.createElement('div');
+
+        heart.className =
+          'float-heart';
+
+        heart.textContent = '♥';
+
+        heart.style.left =
+          `${Math.random() * 100}vw`;
+
+        heart.style.fontSize =
+          `${12 + Math.random() * 18}px`;
+
+        heart.style.animationDuration =
+          `${6 + Math.random() * 7}s`;
+
+        heart.style.animationDelay =
+          `${-Math.random() * 10}s`;
+
+        bg.appendChild(heart);
+
+      }
+
+    }
+
+  </script>
+
+</body>
+</html>
